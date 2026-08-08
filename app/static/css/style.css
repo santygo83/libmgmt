@@ -1,0 +1,5 @@
+.sidebar { min-height: calc(100vh - 56px); }
+.sidebar .nav-link { color: #333; border-radius: .375rem; margin-bottom: .25rem; }
+.sidebar .nav-link:hover { background: #e9ecef; }
+.card .card-subtitle { font-size: .85rem; }
+body { background: #f8f9fa; }

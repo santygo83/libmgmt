@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Error 403{% endblock %}
+{% block main_class %}col-md-6 offset-md-3 text-center{% endblock %}
+{% block content %}
+<div class="mt-5">
+  <h1 class="display-1">403</h1>
+  <p class="lead">Forbidden — you do not have permission to view this page.</p>
+  <a class="btn btn-primary" href="{{ url_for('auth.index') }}">Go Home</a>
+</div>
+{% endblock %}

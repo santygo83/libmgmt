@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% include "_admin_sidebar.html" %}
+{% block title %}Admin Dashboard{% endblock %}
+{% block main_class %}col-md-10 ms-sm-auto{% endblock %}
+{% block content %}
+<h2 class="mb-4">Dashboard</h2>
+<div class="row g-3 mb-4">
+  {% set cards = [
+    ("Total Books", stats.total_books, "primary", "book"),
+    ("Available", stats.available_copies, "success", "check-circle"),
+    ("Issued", stats.issued_copies, "warning", "arrow-left-right"),
+    ("Pending Requests", stats.pending_requests, "info", "inbox"),
+    ("Users", stats.users, "secondary", "people"),
+    ("Overdue", stats.overdue_books, "danger", "exclamation-triangle"),
+  ] %}
+  {% for label, value, color, icon in cards %}
+  <div class="col-md-4">
+    <div class="card text-white bg-{{ color }} shadow-sm">
+      <div class="card-body d-flex justify-content-between align-items-center">
+        <div>
+          <h6 class="card-subtitle mb-1">{{ label }}</h6>
+          <h2 class="mb-0">{{ value }}</h2>
+        </div>
+        <i class="bi bi-{{ icon }} fs-1 opacity-50"></i>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<h4 class="mb-3">Recently Issued Books</h4>
+<div class="table-responsive">
+<table class="table table-striped">
+  <thead><tr><th>Book</th><th>User</th><th>Issue Date</th><th>Due Date</th><th>Status</th></tr></thead>
+  <tbody>
+  {% for loan in recent %}
+    <tr>
+      <td>{{ loan.book.title }}</td>
+      <td>{{ loan.user.name }}</td>
+      <td>{{ loan.issue_date.strftime('%Y-%m-%d') }}</td>
+      <td>{{ loan.due_date.strftime('%Y-%m-%d') }}</td>
+      <td><span class="badge bg-secondary">{{ loan.effective_status.value }}</span></td>
+    </tr>
+  {% else %}
+    <tr><td colspan="5" class="text-center text-muted">No loans yet</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

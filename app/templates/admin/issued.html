@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% include "_admin_sidebar.html" %}
+{% block title %}Issued Books{% endblock %}
+{% block main_class %}col-md-10 ms-sm-auto{% endblock %}
+{% block content %}
+<h2 class="mb-4">Issued Books</h2>
+<div class="table-responsive">
+<table class="table align-middle">
+  <thead><tr><th>Book</th><th>User</th><th>Issued</th><th>Due</th><th>Status</th><th>Action</th></tr></thead>
+  <tbody>
+  {% for loan in loans %}
+    <tr class="{{ 'table-danger' if loan.is_overdue else '' }}">
+      <td>{{ loan.book.title }}</td>
+      <td>{{ loan.user.name }}</td>
+      <td>{{ loan.issue_date.strftime('%Y-%m-%d') }}</td>
+      <td>{{ loan.due_date.strftime('%Y-%m-%d') }}</td>
+      <td><span class="badge bg-secondary">{{ loan.effective_status.value }}</span></td>
+      <td>
+        <form method="post" action="{{ url_for('admin.return_loan', loan_id=loan.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-sm btn-outline-primary">Mark Returned</button>
+        </form>
+      </td>
+    </tr>
+  {% else %}
+    <tr><td colspan="6" class="text-center text-muted">No issued books</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% include "_user_sidebar.html" %}
+{% block title %}Profile{% endblock %}
+{% block main_class %}col-md-10 ms-sm-auto{% endblock %}
+{% block content %}
+<h2 class="mb-4">Profile</h2>
+<div class="card shadow-sm col-md-6">
+  <div class="card-body">
+    <dl class="row">
+      <dt class="col-sm-4">Name</dt><dd class="col-sm-8">{{ current_user.name }}</dd>
+      <dt class="col-sm-4">Email</dt><dd class="col-sm-8">{{ current_user.email }}</dd>
+      <dt class="col-sm-4">Role</dt><dd class="col-sm-8">{{ current_user.role.value }}</dd>
+      <dt class="col-sm-4">Member Since</dt><dd class="col-sm-8">{{ current_user.created_at.strftime('%Y-%m-%d') }}</dd>
+    </dl>
+  </div>
+</div>
+{% endblock %}

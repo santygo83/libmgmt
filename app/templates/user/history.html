@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% include "_user_sidebar.html" %}
+{% block title %}Borrowing History{% endblock %}
+{% block main_class %}col-md-10 ms-sm-auto{% endblock %}
+{% block content %}
+<h2 class="mb-4">Borrowing History</h2>
+<div class="table-responsive">
+<table class="table align-middle">
+  <thead><tr><th>Book</th><th>Issued</th><th>Due</th><th>Returned</th><th>Status</th></tr></thead>
+  <tbody>
+  {% for loan in loans %}
+    <tr>
+      <td>{{ loan.book.title }}</td>
+      <td>{{ loan.issue_date.strftime('%Y-%m-%d') }}</td>
+      <td>{{ loan.due_date.strftime('%Y-%m-%d') }}</td>
+      <td>{{ loan.return_date.strftime('%Y-%m-%d') if loan.return_date else '-' }}</td>
+      <td><span class="badge bg-secondary">{{ loan.effective_status.value }}</span></td>
+    </tr>
+  {% else %}
+    <tr><td colspan="5" class="text-center text-muted">No history yet</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

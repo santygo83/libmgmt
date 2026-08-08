@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% include "_admin_sidebar.html" %}
+{% block title %}Book Requests{% endblock %}
+{% block main_class %}col-md-10 ms-sm-auto{% endblock %}
+{% block content %}
+<h2 class="mb-4">Pending Book Requests</h2>
+<div class="table-responsive">
+<table class="table align-middle">
+  <thead><tr><th>User</th><th>Book</th><th>Requested</th><th>Actions</th></tr></thead>
+  <tbody>
+  {% for req in requests %}
+    <tr>
+      <td>{{ req.user.name }}</td>
+      <td>{{ req.book.title }}</td>
+      <td>{{ req.request_date.strftime('%Y-%m-%d') }}</td>
+      <td>
+        <form method="post" action="{{ url_for('admin.approve_request', request_id=req.id) }}" class="d-inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-sm btn-success">Approve</button>
+        </form>
+        <button class="btn btn-sm btn-danger" data-bs-toggle="collapse" data-bs-target="#reject-{{ req.id }}">Reject</button>
+        <form method="post" action="{{ url_for('admin.reject_request', request_id=req.id) }}"
+              class="collapse mt-2" id="reject-{{ req.id }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="input-group">
+            <input type="text" name="reason" class="form-control form-control-sm" placeholder="Reason" required>
+            <button class="btn btn-sm btn-outline-danger">Confirm</button>
+          </div>
+        </form>
+      </td>
+    </tr>
+  {% else %}
+    <tr><td colspan="4" class="text-center text-muted">No pending requests</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

@@ -1,0 +1,13 @@
+{% block sidebar %}
+<nav class="col-md-2 d-md-block bg-light sidebar p-3">
+  <ul class="nav flex-column">
+    <li class="nav-item"><a class="nav-link" href="{{ url_for('user.dashboard') }}"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
+    <li class="nav-item"><a class="nav-link" href="{{ url_for('books.browse') }}"><i class="bi bi-search"></i> Browse Books</a></li>
+    <li class="nav-item"><a class="nav-link" href="{{ url_for('user.my_requests') }}"><i class="bi bi-inbox"></i> My Requests</a></li>
+    <li class="nav-item"><a class="nav-link" href="{{ url_for('user.my_books') }}"><i class="bi bi-book"></i> My Books</a></li>
+    <li class="nav-item"><a class="nav-link" href="{{ url_for('user.history') }}"><i class="bi bi-clock-history"></i> Borrowing History</a></li>
+    <li class="nav-item"><a class="nav-link" href="{{ url_for('user.profile') }}"><i class="bi bi-person"></i> Profile</a></li>
+    <li class="nav-item"><a class="nav-link" href="{{ url_for('auth.logout') }}"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
+  </ul>
+</nav>
+{% endblock %}
