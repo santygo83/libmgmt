@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TaskBoard — a no-database web app</title>
+  <meta name="description" content="A simple static task board served by Nginx. No database, no backend.">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <h1 class="brand">📋 TaskBoard</h1>
+      <p class="tagline">A tiny web app — no database, served straight from Nginx.</p>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="add-panel">
+      <form id="task-form" autocomplete="off">
+        <input
+          id="task-input"
+          type="text"
+          placeholder="What needs doing?"
+          aria-label="New task"
+          maxlength="120"
+          required
+        >
+        <select id="task-priority" aria-label="Priority">
+          <option value="low">Low</option>
+          <option value="normal" selected>Normal</option>
+          <option value="high">High</option>
+        </select>
+        <button type="submit">Add</button>
+      </form>
+    </section>
+
+    <section class="controls">
+      <div class="filters" role="tablist" aria-label="Filter tasks">
+        <button class="filter active" data-filter="all">All</button>
+        <button class="filter" data-filter="active">Active</button>
+        <button class="filter" data-filter="done">Done</button>
+      </div>
+      <div class="stats">
+        <span id="count-active">0</span> active ·
+        <span id="count-done">0</span> done
+      </div>
+    </section>
+
+    <ul id="task-list" class="task-list" aria-live="polite"></ul>
+
+    <p id="empty-state" class="empty-state">Nothing here yet. Add your first task above ☝️</p>
+
+    <div class="bulk">
+      <button id="clear-done" class="link-btn">Clear completed</button>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>Static site · HTML + CSS + JavaScript · your data stays in this browser.</p>
+    </div>
+  </footer>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
