@@ -1,12 +1,46 @@
-name: Deploy to EC2
+name: Deploy to EC2 (self-healing)
 
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
+# Allow the autofix job to push a branch and open a pull request.
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
+  # ---------------------------------------------------------------------------
+  # 1) VALIDATE — the gate. Lint HTML and check JS syntax before anything ships.
+  #    If this fails on main, the autofix job downstream is triggered.
+  # ---------------------------------------------------------------------------
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Lint HTML
+        run: npx --yes htmlhint index.html
+
+      - name: Check JavaScript syntax
+        run: node --check js/app.js
+
+  # ---------------------------------------------------------------------------
+  # 2) DEPLOY — your original job, unchanged except that it now waits for
+  #    validate to pass and only runs on a real push to main (not on PRs).
+  # ---------------------------------------------------------------------------
   deploy:
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: DEV
     steps:
@@ -34,3 +68,77 @@ jobs:
           ssh -i ~/.ssh/ec2_key -o StrictHostKeyChecking=no \
             "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}" \
             "bash /tmp/taskboard/deploy/setup_ec2.sh"
+
+  # ---------------------------------------------------------------------------
+  # 3) AUTOFIX — the self-healing step. Runs only when validate FAILS.
+  #    OpenCode (DeepSeek backend) reads the lint/syntax errors, fixes the code,
+  #    and opens a PR. The guard on head_ref stops it fixing its own fixes.
+  # ---------------------------------------------------------------------------
+  autofix:
+    needs: validate
+    if: failure() && !startsWith(github.head_ref, 'autofix/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Capture the validation errors into a log
+        run: |
+          # Re-run the same checks, capturing output instead of failing the job.
+          {
+            echo "=== HTML lint (htmlhint index.html) ==="
+            npx --yes htmlhint index.html 2>&1 || true
+            echo ""
+            echo "=== JS syntax (node --check js/app.js) ==="
+            node --check js/app.js 2>&1 || true
+          } > /tmp/ci_errors.log
+          echo "----- captured errors -----"
+          cat /tmp/ci_errors.log
+
+      - name: Install OpenCode
+        run: npm install -g opencode-ai
+
+      - name: Run OpenCode to diagnose and fix
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: |
+          ERRORS="$(cat /tmp/ci_errors.log)"
+          PROMPT="Our CI validation failed. Below are the exact errors from htmlhint and node --check.
+          Diagnose the root cause and fix the offending files (index.html, css/style.css, js/app.js).
+          Make the smallest change that resolves the errors. Do not modify unrelated files,
+          the deploy/ folder, or the workflow. Here are the errors:
+
+          ${ERRORS}"
+
+          # Headless / non-interactive run. 'opencode run' executes a single prompt
+          # and applies edits to the working tree, then exits.
+          opencode run "$PROMPT"
+
+      - name: Show what OpenCode changed
+        run: git --no-pager diff
+
+      - name: Open a pull request with the fix
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: autofix/ci-${{ github.run_id }}
+          commit-message: "fix: automated CI fix by OpenCode (DeepSeek)"
+          title: "Auto-fix: CI validation failure"
+          body: |
+            An automated fix attempt by **OpenCode** (DeepSeek backend), triggered because
+            the `validate` job failed on the last push.
+
+            **Captured CI errors:**
+            ```
+            ${{ '' }}
+            ```
+            _See the "Capture the validation errors" step logs for the full error text._
+
+            Please review the diff before merging. Validation will re-run automatically on this PR.
+          labels: automated, ci-autofix
