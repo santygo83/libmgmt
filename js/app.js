@@ -34,7 +34,7 @@
     }
   }
 
-  function save( {
+  function save() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
     } catch (err) {
