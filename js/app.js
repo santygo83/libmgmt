@@ -35,7 +35,7 @@
   }
 
   function save() {
-    try 
+    try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
     } catch (err) {
       console.warn("Could not save tasks:", err);
