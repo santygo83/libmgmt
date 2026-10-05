@@ -1,4 +1,4 @@
-# TaskBoard — a no-database static web app
+# TaskBoard — a no-database static web app for Task Management
 
 A tiny task board built with plain **HTML, CSS, and JavaScript**. There is no database and no
 application server: Nginx serves the files directly, and all logic runs in the browser. Your
