@@ -2,9 +2,9 @@ name: CI/CD
 
 on:
   push:
-    branches: [Dev]
+    branches: [main]
   pull_request:
-    branches: [Dev]
+    branches: [main]
   workflow_dispatch:
 
 # Allow the autofix job to push a branch and open a pull request.
