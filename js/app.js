@@ -8,7 +8,7 @@
 
   const STORAGE_KEY = "taskboard.tasks.v1";
 
-  /** @type {{id:string, text:string, priority:string, done:boolean}[]} */
+  /** @type {{id:string, text:string, priority:string, done:boolean, startDate:string, endDate:string}[]} */
   let tasks = [];
   let currentFilter = "all";
 
@@ -16,6 +16,8 @@
   const form = document.getElementById("task-form");
   const input = document.getElementById("task-input");
   const priority = document.getElementById("task-priority");
+  const startInput = document.getElementById("task-start");
+  const endInput = document.getElementById("task-end");
   const list = document.getElementById("task-list");
   const emptyState = document.getElementById("empty-state");
   const countActive = document.getElementById("count-active");
@@ -74,6 +76,20 @@
       span.className = "task-text";
       span.textContent = task.text;
 
+      const body = document.createElement("div");
+      body.className = "task-body";
+      body.appendChild(span);
+
+      if (task.startDate || task.endDate) {
+        const dates = document.createElement("span");
+        dates.className = "task-dates";
+        const parts = [];
+        if (task.startDate) parts.push("Start: " + task.startDate);
+        if (task.endDate) parts.push("End: " + task.endDate);
+        dates.textContent = parts.join(" · ");
+        body.appendChild(dates);
+      }
+
       const badge = document.createElement("span");
       badge.className = "task-badge";
       badge.textContent = task.priority;
@@ -85,7 +101,7 @@
       del.setAttribute("aria-label", "Delete task");
       del.addEventListener("click", () => remove(task.id));
 
-      li.append(check, span, badge, del);
+      li.append(check, body, badge, del);
       list.appendChild(li);
     });
 
@@ -98,8 +114,15 @@
   }
 
   // --- Actions -------------------------------------------------------------
-  function add(text, prio) {
-    tasks.unshift({ id: makeId(), text: text, priority: prio, done: false });
+  function add(text, prio, startDate, endDate) {
+    tasks.unshift({
+      id: makeId(),
+      text: text,
+      priority: prio,
+      done: false,
+      startDate: startDate || "",
+      endDate: endDate || ""
+    });
     save();
     render();
   }
@@ -130,8 +153,10 @@
     e.preventDefault();
     const text = input.value.trim();
     if (!text) return;
-    add(text, priority.value);
+    add(text, priority.value, startInput.value, endInput.value);
     input.value = "";
+    startInput.value = "";
+    endInput.value = "";
     input.focus();
   });
 
