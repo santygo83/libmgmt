@@ -1,10 +1,10 @@
-name: Dev — Validate & Autofix
+name: CI/CD
 
 on:
   push:
-    branches: [Dev]
+    branches: [main, Dev]
   pull_request:
-    branches: [Dev]
+    branches: [main, Dev]
   workflow_dispatch:
 
 # Allow the autofix job to push a branch and open a pull request.
@@ -15,7 +15,6 @@ permissions:
 jobs:
   # ---------------------------------------------------------------------------
   # 1) VALIDATE — the gate. Lint HTML and check JS syntax before anything ships.
-  #    If this fails, the autofix job downstream is triggered.
   # ---------------------------------------------------------------------------
   validate:
     runs-on: ubuntu-latest
@@ -36,7 +35,7 @@ jobs:
 
   # ---------------------------------------------------------------------------
   # 2) CREATE-PR — once validate passes on a push to Dev, open a pull request
-  #    to merge Dev into main. Merging that PR triggers the main deploy workflow.
+  #    to merge Dev into main. Merging that PR triggers the deploy job on main.
   # ---------------------------------------------------------------------------
   create-pr:
     needs: validate
@@ -60,13 +59,49 @@ jobs:
             || echo "PR already exists or could not be created."
 
   # ---------------------------------------------------------------------------
-  # 3) AUTOFIX — the self-healing step. Runs only when validate FAILS.
+  # 3) DEPLOY — runs only on a real push to main (e.g. a merged PR from Dev),
+  #    after validate passes.
+  # ---------------------------------------------------------------------------
+  deploy:
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: DEV
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/ec2_key
+          chmod 600 ~/.ssh/ec2_key
+          ssh-keyscan -H "${{ vars.EC2_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Copy site files to EC2
+        run: |
+          ssh -i ~/.ssh/ec2_key -o StrictHostKeyChecking=no \
+            "${{ vars.EC2_USER }}@${{ vars.EC2_HOST }}" \
+            "rm -rf /tmp/taskboard && mkdir -p /tmp/taskboard"
+          scp -i ~/.ssh/ec2_key -o StrictHostKeyChecking=no \
+            -r index.html css js deploy \
+            "${{ vars.EC2_USER }}@${{ vars.EC2_HOST }}:/tmp/taskboard/"
+
+      - name: Run deploy script on EC2
+        run: |
+          ssh -i ~/.ssh/ec2_key -o StrictHostKeyChecking=no \
+            "${{ vars.EC2_USER }}@${{ vars.EC2_HOST }}" \
+            "bash /tmp/taskboard/deploy/setup_ec2.sh"
+
+  # ---------------------------------------------------------------------------
+  # 4) AUTOFIX — the self-healing step. Runs only when validate FAILS on Dev.
   #    OpenCode (DeepSeek backend) reads the lint/syntax errors, fixes the code,
-  #    and opens a PR. The guard on head_ref stops it fixing its own fixes.
+  #    and opens a PR back into Dev. The guard on head_ref stops it fixing its
+  #    own fixes.
   # ---------------------------------------------------------------------------
   autofix:
     needs: validate
-    if: failure() && !startsWith(github.head_ref, 'autofix/')
+    if: failure() && github.ref_name == 'Dev' && !startsWith(github.head_ref, 'autofix/')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -81,7 +116,6 @@ jobs:
 
       - name: Capture the validation errors into a log
         run: |
-          # Re-run the same checks, capturing output instead of failing the job.
           {
             echo "=== HTML lint (htmlhint index.html) ==="
             npx --yes htmlhint index.html 2>&1 || true
@@ -107,8 +141,6 @@ jobs:
 
           ${ERRORS}"
 
-          # Headless / non-interactive run. 'opencode run' executes a single prompt
-          # and applies edits to the working tree, then exits.
           opencode run "$PROMPT"
 
       - name: Show what OpenCode changed
@@ -117,18 +149,13 @@ jobs:
       - name: Open a pull request with the fix
         uses: peter-evans/create-pull-request@v6
         with:
+          base: Dev
           branch: autofix/ci-${{ github.run_id }}
           commit-message: "fix: automated CI fix by OpenCode (DeepSeek)"
           title: "Auto-fix: CI validation failure"
           body: |
             An automated fix attempt by **OpenCode** (DeepSeek backend), triggered because
-            the `validate` job failed on the last push.
-
-            **Captured CI errors:**
-            ```
-            ${{ '' }}
-            ```
-            _See the "Capture the validation errors" step logs for the full error text._
+            the `validate` job failed on the last push to Dev.
 
             Please review the diff before merging. Validation will re-run automatically on this PR.
           labels: automated, ci-autofix
