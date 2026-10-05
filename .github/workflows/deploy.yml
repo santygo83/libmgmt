@@ -35,7 +35,32 @@ jobs:
         run: node --check js/app.js
 
   # ---------------------------------------------------------------------------
-  # 2) AUTOFIX — the self-healing step. Runs only when validate FAILS.
+  # 2) CREATE-PR — once validate passes on a push to Dev, open a pull request
+  #    to merge Dev into main. Merging that PR triggers the main deploy workflow.
+  # ---------------------------------------------------------------------------
+  create-pr:
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/Dev'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Open PR from Dev to main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr create \
+            --base main \
+            --head Dev \
+            --title "Release: Dev -> main" \
+            --body "Created automatically after the Dev pipeline passed." \
+            || echo "PR already exists or could not be created."
+
+  # ---------------------------------------------------------------------------
+  # 3) AUTOFIX — the self-healing step. Runs only when validate FAILS.
   #    OpenCode (DeepSeek backend) reads the lint/syntax errors, fixes the code,
   #    and opens a PR. The guard on head_ref stops it fixing its own fixes.
   # ---------------------------------------------------------------------------
