@@ -1,10 +1,10 @@
-name: Deploy to EC2 (self-healing)
+name: Dev — Validate & Autofix
 
 on:
   push:
-    branches: [main]
+    branches: [Dev]
   pull_request:
-    branches: [main]
+    branches: [Dev]
   workflow_dispatch:
 
 # Allow the autofix job to push a branch and open a pull request.
@@ -15,7 +15,7 @@ permissions:
 jobs:
   # ---------------------------------------------------------------------------
   # 1) VALIDATE — the gate. Lint HTML and check JS syntax before anything ships.
-  #    If this fails on main, the autofix job downstream is triggered.
+  #    If this fails, the autofix job downstream is triggered.
   # ---------------------------------------------------------------------------
   validate:
     runs-on: ubuntu-latest
@@ -35,42 +35,7 @@ jobs:
         run: node --check js/app.js
 
   # ---------------------------------------------------------------------------
-  # 2) DEPLOY — your original job, unchanged except that it now waits for
-  #    validate to pass and only runs on a real push to main (not on PRs).
-  # ---------------------------------------------------------------------------
-  deploy:
-    needs: validate
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    environment: DEV
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up SSH key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/ec2_key
-          chmod 600 ~/.ssh/ec2_key
-          ssh-keyscan -H "${{ vars.EC2_HOST }}" >> ~/.ssh/known_hosts
-
-      - name: Copy site files to EC2
-        run: |
-          ssh -i ~/.ssh/ec2_key -o StrictHostKeyChecking=no \
-            "${{ vars.EC2_USER }}@${{ vars.EC2_HOST }}" \
-            "rm -rf /tmp/taskboard && mkdir -p /tmp/taskboard"
-          scp -i ~/.ssh/ec2_key -o StrictHostKeyChecking=no \
-            -r index.html css js deploy \
-            "${{ vars.EC2_USER }}@${{ vars.EC2_HOST }}:/tmp/taskboard/"
-
-      - name: Run deploy script on EC2
-        run: |
-          ssh -i ~/.ssh/ec2_key -o StrictHostKeyChecking=no \
-            "${{ vars.EC2_USER }}@${{ vars.EC2_HOST }}" \
-            "bash /tmp/taskboard/deploy/setup_ec2.sh"
-
-  # ---------------------------------------------------------------------------
-  # 3) AUTOFIX — the self-healing step. Runs only when validate FAILS.
+  # 2) AUTOFIX — the self-healing step. Runs only when validate FAILS.
   #    OpenCode (DeepSeek backend) reads the lint/syntax errors, fixes the code,
   #    and opens a PR. The guard on head_ref stops it fixing its own fixes.
   # ---------------------------------------------------------------------------
